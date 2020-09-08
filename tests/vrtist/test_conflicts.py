@@ -17,6 +17,7 @@ import tests.blender_snippets as bl
 from tests.blender.blender_testcase import BlenderTestCase
 from tests.mixer_testcase import BlenderDesc
 
+
 @unittest.skip("WIP")
 class ThrottledTestCase(BlenderTestCase):
     def setUp(self, startup_file: str = "file2.blend"):
