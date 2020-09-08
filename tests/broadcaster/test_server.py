@@ -1,10 +1,15 @@
 import unittest
 import threading
 import time
+from typing import Optional, List, Any, Mapping
 
 from mixer.broadcaster.apps.server import Server
 from mixer.broadcaster.client import Client
+from mixer.broadcaster.client import make_connected_socket
+from mixer.broadcaster.socket import Socket
 import mixer.broadcaster.common as common
+
+from tests.process import ServerProcess
 
 
 class Delegate:
@@ -175,6 +180,128 @@ class TestServer(unittest.TestCase):
         self.assertEqual(len(d0.name_room), 1)
         self.assertCountEqual(d0.name_room, expected)
         self.assertListEqual(d0.name_room, d1.name_room)
+
+
+class SimpleClient:
+    socket: Optional[Socket] = None
+    host: str
+    port: int
+
+    def __init__(self, host: str, port: int):
+        self.host = host
+        self.port = port
+
+    def __del__(self):
+        if self.is_connected():
+            self.disconnect()
+
+    def __enter__(self):
+        if not self.is_connected():
+            self.connect()
+        return self
+
+    def __exit__(self, *args):
+        if self.is_connected():
+            self.disconnect()
+
+    def connect(self) -> None:
+        if self.is_connected():
+            raise RuntimeError("Client.connect : already connected")
+        self.socket = make_connected_socket(self.host, self.port)
+
+    def disconnect(self) -> None:
+        if self.socket:
+            self.socket.shutdown_and_close()
+            self.socket = None
+
+    def is_connected(self) -> bool:
+        return self.socket is not None
+
+    def send_command(self, *args) -> None:
+        common.write_message(self.socket, common.Command(*args))
+
+    def wait_incoming_command(self, timeout: float) -> Optional[common.Command]:
+        assert self.socket
+        return common.read_message(self.socket, timeout=timeout)
+
+
+DEFAULT_PROTOCOL_TIMEOUT: float = 10
+
+
+class TestProtocol(unittest.TestCase):
+    def setUp(self):
+        self._server_process = ServerProcess(test_own_connection=False)
+        self._server_process.start(["--log-level", "DEBUG", "--log-server-updates"])
+
+    def tearDown(self):
+        self._server_process.kill()
+
+    def wait_incoming_command(self, client: SimpleClient, message_type: common.MessageType) -> common.Command:
+        command = client.wait_incoming_command(DEFAULT_PROTOCOL_TIMEOUT)
+        self.assertIsNotNone(command)
+        assert command is not None  # Avoid static type warnings on lines below
+        self.assertEqual(command.type, message_type)
+        return command
+
+    def wait_single_client_update(self, client: SimpleClient) -> Mapping[str, Any]:
+        command = self.wait_incoming_command(client, common.MessageType.CLIENT_UPDATE)
+        client_update, _ = common.decode_json(command.data, 0)
+        self.assertEqual(len(client_update), 1)
+        update = client_update[next(iter(client_update))]
+        return update
+
+    def wait_single_room_update(self, client: SimpleClient) -> Mapping[str, Any]:
+        command = self.wait_incoming_command(client, common.MessageType.ROOM_UPDATE)
+        room_update, _ = common.decode_json(command.data, 0)
+        self.assertEqual(len(room_update), 1)
+        update = room_update[next(iter(room_update))]
+        return update
+
+    def assert_all_client_attributes(self, update: Mapping[str, Any]):
+        self.assertIn(common.ClientAttributes.ID, update)
+        self.assertIn(common.ClientAttributes.IP, update)
+        self.assertIn(common.ClientAttributes.PORT, update)
+        self.assertIn(common.ClientAttributes.ROOM, update)
+
+    def assert_all_room_attributes(self, update: Mapping[str, Any]):
+        self.assertIn(common.RoomAttributes.NAME, update)
+        self.assertIn(common.RoomAttributes.KEEP_OPEN, update)
+        self.assertIn(common.RoomAttributes.COMMAND_COUNT, update)
+        self.assertIn(common.RoomAttributes.BYTE_SIZE, update)
+        self.assertIn(common.RoomAttributes.JOINABLE, update)
+
+    def test_join_room_new_room_is_created(self):
+        # Test /doc/protocol.md#join_room when room does not exist
+        server_process = self._server_process
+        with SimpleClient(server_process.host, server_process.port) as client:
+            client_update = self.wait_single_client_update(client)
+            self.assert_all_client_attributes(client_update)
+            self.assertIsNone(client_update[common.ClientAttributes.ROOM])
+
+            room_name = "new_test_room"
+            client.send_command(common.MessageType.JOIN_ROOM, room_name.encode("utf8"))
+
+            command = self.wait_incoming_command(client, common.MessageType.JOIN_ROOM)
+            self.assertEqual(command.data.decode(), room_name)
+
+            command = self.wait_incoming_command(client, common.MessageType.CONTENT)
+
+            room_update = self.wait_single_room_update(client)
+            self.assert_all_room_attributes(room_update)
+            self.assertEqual(room_update[common.RoomAttributes.NAME], room_name)
+            self.assertEqual(room_update[common.RoomAttributes.KEEP_OPEN], False)
+            self.assertEqual(room_update[common.RoomAttributes.COMMAND_COUNT], 0)
+            self.assertEqual(room_update[common.RoomAttributes.BYTE_SIZE], 0)
+            self.assertEqual(room_update[common.RoomAttributes.JOINABLE], False)
+
+            client_update = self.wait_single_client_update(client)
+            self.assertEqual(len(client_update), 1)
+            self.assertEqual(client_update[common.ClientAttributes.ROOM], room_name)
+
+            client.send_command(common.MessageType.CONTENT)
+            room_update = self.wait_single_room_update(client)
+            self.assertEqual(len(room_update), 1)
+            self.assertEqual(room_update[common.RoomAttributes.JOINABLE], True)
 
 
 if __name__ == "__main__":

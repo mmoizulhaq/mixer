@@ -129,6 +129,10 @@ Here are rules we want this protocol to respect:
 
 **Future work**: Implement unit tests that check rules are respected, and protocol is respected.
 
+### On client connection
+
+When a new client connect to the server, the server broadcast `CLIENT_UPDATE` to all Clients (including the new one) for this new client. The ROOM attribute is null for this `CLIENT_UPDATE` message.
+
 ### JOIN_ROOM
 
 Data:

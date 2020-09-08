@@ -43,3 +43,7 @@ class Socket:
             logger.warning(f"recv {self._upstream_Bps} Bps, buffer {len(buffer)} bytes, delay {delay}")
             time.sleep(delay)
         return buffer
+
+    def shutdown_and_close(self):
+        self.shutdown(socket.SHUT_RDWR)
+        self.close()

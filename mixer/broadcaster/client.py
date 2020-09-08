@@ -11,6 +11,12 @@ from mixer.broadcaster.common import update_attributes_and_get_diff, update_name
 logger = logging.getLogger() if __name__ == "__main__" else logging.getLogger(__name__)
 
 
+def make_connected_socket(host: str, port: int) -> Socket:
+    s = Socket(socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+    s.connect((host, port))
+    return s
+
+
 class Client:
     """
     The client class is responsible for:
@@ -24,7 +30,7 @@ class Client:
         self.host = host
         self.port = port
         self.pending_commands: List[common.Command] = []
-        self.socket: Socket = None
+        self.socket: Optional[Socket] = None
 
         self.client_id: Optional[str] = None  # Will be filled with a unique string identifying this client
         self.current_custom_attributes: Dict[str, Any] = {}
@@ -49,9 +55,7 @@ class Client:
             raise RuntimeError("Client.connect : already connected")
 
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.socket = Socket(sock)
-            self.socket.connect((self.host, self.port))
+            self.socket = make_connected_socket(self.host, self.port)
             local_address = self.socket.getsockname()
             logger.info(
                 "Connecting from local %s:%s to %s:%s", local_address[0], local_address[1], self.host, self.port,
@@ -70,8 +74,7 @@ class Client:
 
     def disconnect(self):
         if self.socket:
-            self.socket.shutdown(socket.SHUT_RDWR)
-            self.socket.close()
+            self.socket.shutdown_and_close()
             self.socket = None
 
     def is_connected(self):

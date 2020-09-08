@@ -70,7 +70,9 @@ class Connection:
                 return
             room_name = command.data.decode()
             try:
+                logger.debug("Calling self._server.join_room")
                 self._server.join_room(self, room_name)
+                logger.debug("Call to self._server.join_room done")
             except Exception as e:
                 _send_error(f"{e}")
 
@@ -194,6 +196,7 @@ class Connection:
         """
         Add command to be consumed later. Meant to be used by other threads.
         """
+        logger.debug("Adding command %s to queue of %s", command.type, self.unique_id)
         self._command_queue.put(command)
 
     def send_command(self, command: common.Command):
@@ -235,7 +238,7 @@ class Room:
         # Server is responsible of increasing / decreasing join_count, with mutex protection
 
         creator.room = self
-        creator.send_command(common.Command(common.MessageType.JOIN_ROOM, common.encode_string(self.name)))
+        creator.send_command(common.Command(common.MessageType.JOIN_ROOM, self.name.encode("utf8")))
         creator.send_command(
             common.Command(common.MessageType.CONTENT)
         )  # self.joinable will be set to true by creator later
@@ -289,6 +292,7 @@ class Room:
     def attributes_dict(self):
         return {
             **self.custom_attributes,
+            common.RoomAttributes.NAME: self.name,
             common.RoomAttributes.KEEP_OPEN: self.keep_open,
             common.RoomAttributes.COMMAND_COUNT: self.command_count(),
             common.RoomAttributes.BYTE_SIZE: self.byte_size,

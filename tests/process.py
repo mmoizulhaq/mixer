@@ -254,10 +254,11 @@ class ServerProcess(PythonProcess):
     Starts a broadcaster process
     """
 
-    def __init__(self):
+    def __init__(self, test_own_connection: bool = True):
         super().__init__()
         self.port: int = int(os.environ.get("VRTIST_PORT", DEFAULT_PORT))
         self.host: str = "127.0.0.1"
+        self.test_own_connection: bool = test_own_connection
 
     def start(self, server_args: Optional[List[str]] = None):
         # do not use an existing server, since it might not be ours and might not be setup
@@ -275,9 +276,10 @@ class ServerProcess(PythonProcess):
         if server_args:
             args.extend(server_args)
         super().start(args)
-        self._test_connect(timeout=4)
+        if self.test_own_connection:
+            self._test_connect(timeout=4)
 
-    def _test_connect(self, timeout: float = 0.0):
+    def _test_connect(self, timeout: Optional[float] = 0.0):
         waited = 0.0
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
