@@ -1,7 +1,7 @@
 import unittest
 import threading
 import time
-from typing import Optional, List, Any, Mapping
+from typing import Optional, Any, Mapping
 
 from mixer.broadcaster.apps.server import Server
 from mixer.broadcaster.client import Client
