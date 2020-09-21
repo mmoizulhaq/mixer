@@ -304,5 +304,27 @@ class TestProtocol(unittest.TestCase):
             self.assertEqual(room_update[common.RoomAttributes.JOINABLE], True)
 
 
+class TestClient(unittest.TestCase):
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_client_is_disconnected_when_server_process_is_killed(self):
+        server_process = ServerProcess()
+        server_process.start()
+
+        with Client(server_process.host, server_process.port) as client:
+            self.assertTrue(client.is_connected())
+            client.fetch_commands()
+
+            server_process.kill()
+
+            self.assertRaises(common.ClientDisconnectedException, client.fetch_commands)
+
+            self.assertTrue(not client.is_connected())
+
+
 if __name__ == "__main__":
     unittest.main()

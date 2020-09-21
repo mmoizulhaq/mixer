@@ -78,7 +78,7 @@ class Connection:
 
         def _leave_room(command: common.Command):
             if self.room is None:
-                _send_error(f"Received leave_room but no room is joined")
+                _send_error("Received leave_room but no room is joined")
                 return
             _ = command.data.decode()  # todo remove room_name from protocol
             self._server.leave_room(self)
@@ -319,8 +319,13 @@ class Room:
                     ):
                         self._commands.pop()
                         self.byte_size -= stored_command.byte_size()
-            self._commands.append(command)
-            self.byte_size += command.byte_size()
+            if (
+                command_type != common.MessageType.CLIENT_ID_WRAPPER
+                and command_type != common.MessageType.FRAME
+                and command_type != common.MessageType.QUERY_ANIMATION_DATA
+            ):
+                self._commands.append(command)
+                self.byte_size += command.byte_size()
 
         with self._commands_mutex:
             current_byte_size = self.byte_size
@@ -434,7 +439,10 @@ class Server:
             return
 
         self.broadcast_to_all_clients(
-            common.Command(common.MessageType.ROOM_UPDATE, common.encode_json({room.name: attributes}),)
+            common.Command(
+                common.MessageType.ROOM_UPDATE,
+                common.encode_json({room.name: attributes}),
+            )
         )
 
     def set_room_custom_attributes(self, room_name: str, custom_attributes: Mapping[str, Any]):

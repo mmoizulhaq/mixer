@@ -166,19 +166,24 @@ def encode_baked_mesh(obj):
     current_material_index = -1
     current_face_index = 0
     logger.debug("Writing %d polygons", len(mesh.polygons))
+    loops = mesh.loops
+    mesh_vertices = mesh.vertices
+    uv_layer_data = None
+    if uvlayer:
+        uv_layer_data = uvlayer.data
     for f in mesh.polygons:
         for loop_id in f.loop_indices:
-            index = mesh.loops[loop_id].vertex_index
-            vertices.extend(mesh.vertices[index].co)
-            normals.extend(mesh.loops[loop_id].normal)
+            mesh_loop = loops[loop_id]
+            index = mesh_loop.vertex_index
+            vertices.extend(mesh_vertices[index].co)
+            normals.extend(mesh_loop.normal)
             if uvlayer:
-                uvs.extend([x for x in uvlayer.data[loop_id].uv])
+                uvs.extend([x for x in uv_layer_data[loop_id].uv])
             indices.append(loop_id)
 
         if f.material_index != current_material_index:
             current_material_index = f.material_index
-            material_indices.append(current_face_index)
-            material_indices.append(current_material_index)
+            material_indices.extend([current_face_index, current_material_index])
         current_face_index = current_face_index + 1
 
     if obj.type != "MESH":
@@ -513,8 +518,8 @@ def decode_baked_mesh(obj, data, index):
 
     # hack ! Since bmesh cannot be used to set custom normals
     normals2 = []
-    for l in me.loops:
-        normals2.append(normals[l.vertex_index])
+    for loop in me.loops:
+        normals2.append(normals[loop.vertex_index])
     me.normals_split_custom_set(normals2)
     me.use_auto_smooth = True
 
