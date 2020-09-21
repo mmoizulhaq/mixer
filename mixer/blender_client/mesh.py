@@ -560,16 +560,21 @@ def decode_base_mesh(client, obj, data, index):
     face_count, index = common.decode_int(data, index)
     logger.debug("Reading %d faces", face_count)
 
+    tmp_data = []
     for _face_idx in range(face_count):
         material_idx, index = common.decode_int(data, index)
         smooth, index = common.decode_bool(data, index)
         vert_count, index = common.decode_int(data, index)
         face_vertices = struct.unpack(f"{vert_count}I", data[index : index + vert_count * 4])
+        tmp_data.append((material_idx, smooth, vert_count, face_vertices))
         index += vert_count * 4
         verts = [bm.verts[i] for i in face_vertices]
-        face = bm.faces.new(verts)
-        face.material_index = material_idx
-        face.smooth = smooth
+        try:
+            face = bm.faces.new(verts)
+            face.material_index = material_idx
+            face.smooth = smooth
+        except ValueError as e:
+            logger.error(e)
 
     index = decode_bmesh_layer(data, index, bm.faces.layers.face_map, bm.faces, decode_layer_int)
 
