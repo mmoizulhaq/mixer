@@ -30,6 +30,7 @@ from mixer.blender_data.attributes import read_attribute, write_attribute
 from mixer.blender_data.datablock_ref_proxy import DatablockRefProxy
 from mixer.blender_data.json_codec import serialize
 from mixer.blender_data.proxy import Delta, DeltaReplace, DeltaUpdate, Proxy
+from mixer.blender_data.struct_proxy import StructProxy
 
 if TYPE_CHECKING:
     from mixer.blender_data.proxy import Context
@@ -127,6 +128,71 @@ class NonePtrProxy(Proxy):
         if isinstance(attr, NonePtrProxy):
             return None
         return DeltaUpdate(attr)
+
+
+@serialize
+class FCurveProxy(StructProxy):
+    """Proxy for a FCurve."""
+
+    # This is needed because FCurve.group is a pointer to Action.groups, for which no generic mechanism exists.
+    # A generic mechanism would require to :
+    # - make a difference between the pointer attribute (FCurve.group) and the pointee (ActionsGroups items)
+    # - save the pointer as an identifier to the pointee relative to the datablock,
+    #   but it seems that path_from_id cannot be used for this purpose.
+
+    _serialize = ("_group_index",)
+
+    def __init__(self):
+        super().__init__()
+        self._group_index: Optional[int] = None
+
+    def load(self, attribute: T.bpy_struct, key: Union[int, str], context: Context) -> StructProxy:
+        """
+        Load the attribute Blender struct into this proxy
+
+        Args:
+            attribute: the Blender struct to load into this proxy, (e.g an ObjectDisplay instance)
+            key: the identifier of attribute in its parent (e.g. "display")
+            context: the proxy and visit state
+        """
+        super().load(attribute, key, context)
+
+        if attribute.group is None:
+            self._group_index = None
+        else:
+            # move to Context
+            datablock = context.proxy_state.datablock(context.visit_state.datablock_proxy.mixer_uuid)
+            self._group_index = list(datablock.groups).index(attribute.group)
+        return self
+
+    def save(
+        self,
+        attribute: T.bpy_struct,
+        parent: Union[T.bpy_struct, T.bpy_prop_collection],
+        key: Union[int, str],
+        context: Context,
+    ):
+        """
+        Save this proxy into attribute
+
+        Args:
+            attribute: the FCurve to store this proxy into
+            parent: the FCurves collection that contains attribute
+            key: the index of attribute in parent
+            context: the proxy and visit state
+        """
+        super().save(attribute, parent, key, context)
+
+        if self._group_index is None:
+            group = None
+        else:
+            # move to Context
+            datablock = context.proxy_state.datablock(context.visit_state.datablock_proxy.mixer_uuid)
+            group = datablock.groups[self._group_index]
+
+        attribute.group = group
+
+    # Diff and apply are to be implemented
 
 
 @serialize
