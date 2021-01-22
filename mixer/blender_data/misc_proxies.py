@@ -160,9 +160,7 @@ class FCurveProxy(StructProxy):
         if attribute.group is None:
             self._group_index = None
         else:
-            # move to Context
-            datablock = context.proxy_state.datablock(context.visit_state.datablock_proxy.mixer_uuid)
-            self._group_index = list(datablock.groups).index(attribute.group)
+            self._group_index = list(attribute.id_data.groups).index(attribute.group)
         return self
 
     def save(
@@ -186,9 +184,7 @@ class FCurveProxy(StructProxy):
         if self._group_index is None:
             group = None
         else:
-            # move to Context
-            datablock = context.proxy_state.datablock(context.visit_state.datablock_proxy.mixer_uuid)
-            group = datablock.groups[self._group_index]
+            group = attribute.id_data.groups[self._group_index]
 
         attribute.group = group
 
