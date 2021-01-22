@@ -77,9 +77,6 @@ class LibraryProxy(DatablockProxy):
             for linked_datablock in library_datablock.users_id:
                 if repr(linked_datablock) == identifier:
                     # logger.warning(f"register indirect for {library_datablock}: {identifier} {uuid}")
-                    linked_datablock.mixer_uuid = uuid
-                    if isinstance(linked_datablock, T.Object):
-                        context.proxy_state.register_object(linked_datablock)
                     return linked_datablock
 
         #   The library is not already loaded:
@@ -272,14 +269,23 @@ class DatablockLinkProxy(DatablockProxy):
 
         from mixer.blender_data.library_proxies import LibraryProxy
 
-        library_proxy = cast(LibraryProxy, context.proxy_state.proxies[self._library_uuid])
+        proxy_state = context.proxy_state
+
+        library_proxy = cast(LibraryProxy, proxy_state.proxies[self._library_uuid])
 
         if self._is_library_indirect:
             # Indirect linked datablock are created implicitely during the load() of their parent. Keep track of
             # them in order to assign them a uuid after their creation. A uuid is required because they can be
             # referenced by non linked datablocks after load (e.g. a linked Camera referenced by the main Scene)
-            datablock = library_proxy.register_indirect(self._identifier, self.mixer_uuid, context)
-            self._has_datablock = datablock is not None
+            uuid = self.mixer_uuid
+            datablock = library_proxy.register_indirect(self._identifier, uuid, context)
+            if datablock is not None:
+                self._has_datablock = True
+                datablock.mixer_uuid = uuid
+                proxy_state.add_datablock(uuid, datablock)
+                if isinstance(datablock, T.Object):
+                    proxy_state.register_object(datablock)
+
             return datablock, None
 
         try:
@@ -291,8 +297,10 @@ class DatablockLinkProxy(DatablockProxy):
             logger.error(f"... {e!r}")
             return None, None
 
-        datablock.mixer_uuid = self.mixer_uuid
         self._has_datablock = True
+        uuid = self.mixer_uuid
+        datablock.mixer_uuid = uuid
+        context.proxy_state.add_datablock(uuid, datablock)
         if isinstance(datablock, T.Object):
             context.proxy_state.register_object(datablock)
 
