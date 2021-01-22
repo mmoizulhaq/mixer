@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from mixer.blender_data.datablock_proxy import DatablockProxy
     from mixer.blender_data.datablock_ref_proxy import DatablockRefProxy
     from mixer.blender_data.proxy import Context, Proxy
+    from mixer.blender_data.struct_proxy import StructProxy
 
 logger = logging.getLogger(__name__)
 
@@ -422,16 +423,7 @@ def conditional_properties(bpy_struct: T.Struct, properties: ItemsView) -> Items
     return filtered.items()
 
 
-def pre_save_datablock(proxy: DatablockProxy, target: T.ID, context: Context) -> T.ID:
-    """Process attributes that must be saved first and return a possibly updated reference to the target"""
-
-    # WARNING this is called from save() and from apply()
-    # When called from save, the proxy has  all the synchronized properties
-    # WHen called from apply, the proxy only contains the updated properties
-
-    if target.library:
-        return target
-
+def create_clear_animation_data(target: T.bpy_struct, proxy: Union[StructProxy, DatablockProxy]):
     if hasattr(target, "animation_data"):
         animation_data = proxy.data("animation_data")
         if animation_data is not None:
@@ -443,6 +435,23 @@ def pre_save_datablock(proxy: DatablockProxy, target: T.ID, context: Context) ->
             else:
                 if target.animation_data is not None:
                     target.animation_data_clear()
+
+
+def pre_save_struct(proxy: StructProxy, target: T.bpy_struct):
+    create_clear_animation_data(target, proxy)
+
+
+def pre_save_datablock(proxy: DatablockProxy, target: T.ID, context: Context) -> T.ID:
+    """Process attributes that must be saved first and return a possibly updated reference to the target"""
+
+    # WARNING this is called from save() and from apply()
+    # When called from save, the proxy has  all the synchronized properties
+    # WHen called from apply, the proxy only contains the updated properties
+
+    if target.library:
+        return target
+
+    create_clear_animation_data(target, proxy)
 
     if isinstance(target, T.Mesh) and proxy.requires_clear_geometry(target):
         target.clear_geometry()
