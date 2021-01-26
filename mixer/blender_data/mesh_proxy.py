@@ -166,7 +166,7 @@ class MeshProxy(DatablockProxy):
         return self
 
     def _diff(
-        self, struct: T.Mesh, key: str, prop: T.Property, context: Context, diff: MeshProxy
+        self, struct: T.Mesh, key: str, prop: T.Property, parent: T.bpy_struct, context: Context, diff: MeshProxy
     ) -> Optional[Union[DeltaUpdate, DeltaReplace]]:
 
         if self.requires_clear_geometry(struct):
@@ -203,7 +203,7 @@ class MeshProxy(DatablockProxy):
                         continue
 
                     proxy_data = self._data.get(k)
-                    delta = diff_attribute(member, k, member_property, proxy_data, context)
+                    delta = diff_attribute(member, k, member_property, proxy_data, parent, context)
 
                     if delta is not None:
                         diff._data[k] = delta

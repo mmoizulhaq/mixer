@@ -74,7 +74,7 @@ class StructProxy(Proxy):
         try:
             for name, bl_rna_property in properties:
                 attr = getattr(attribute, name)
-                attr_value = read_attribute(attr, name, bl_rna_property, context)
+                attr_value = read_attribute(attr, name, bl_rna_property, attribute, context)
                 self._data[name] = attr_value
         finally:
             context.visit_state.path.pop()
@@ -167,7 +167,7 @@ class StructProxy(Proxy):
         return self
 
     def diff(
-        self, attribute: T.bpy_struct, key: Union[int, str], prop: T.Property, context: Context
+        self, attribute: T.bpy_struct, key: Union[int, str], prop: T.Property, parent: T.bpy_struct, context: Context
     ) -> Optional[Delta]:
         """
         Computes the difference between the state of an item tracked by this proxy and its Blender state.
@@ -188,11 +188,17 @@ class StructProxy(Proxy):
         # Create a proxy that will be populated with attributes differences.
         diff = self.__class__()
         diff.init(attribute)
-        delta = self._diff(attribute, key, prop, context, diff)
+        delta = self._diff(attribute, key, prop, parent, context, diff)
         return delta
 
     def _diff(
-        self, attribute: T.bpy_struct, key: Union[int, str], prop: T.Property, context: Context, diff: StructProxy
+        self,
+        attribute: T.bpy_struct,
+        key: Union[int, str],
+        prop: T.Property,
+        parent: T.bpy_struct,
+        context: Context,
+        diff: StructProxy,
     ) -> Optional[Delta]:
         """
         Computes the difference between the state of an item tracked by this proxy and its Blender state
@@ -232,7 +238,7 @@ class StructProxy(Proxy):
                     continue
 
                 proxy_data = self._data.get(k)
-                delta = diff_attribute(member, k, member_property, proxy_data, context)
+                delta = diff_attribute(member, k, member_property, proxy_data, attribute, context)
 
                 if delta is not None:
                     diff._data[k] = delta

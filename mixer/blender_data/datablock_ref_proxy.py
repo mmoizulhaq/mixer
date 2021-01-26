@@ -181,7 +181,12 @@ class DatablockRefProxy(Proxy):
         return update
 
     def diff(
-        self, datablock: T.ID, key: Union[int, str], datablock_property: T.Property, context: Context
+        self,
+        datablock: T.ID,
+        key: Union[int, str],
+        datablock_property: T.Property,
+        parent: T.bpy_struct,
+        context: Context,
     ) -> Optional[DeltaUpdate]:
         """
         Computes the difference between this proxy and its Blender state.
@@ -192,7 +197,7 @@ class DatablockRefProxy(Proxy):
 
             return DeltaUpdate(NonePtrProxy())
 
-        value = read_attribute(datablock, key, datablock_property, context)
+        value = read_attribute(datablock, key, datablock_property, parent, context)
         assert isinstance(value, DatablockRefProxy)
         if value._datablock_uuid != self._datablock_uuid:
             return DeltaUpdate(value)

@@ -226,6 +226,7 @@ class Proxy:
         container: Union[T.bpy_prop_collection, T.Struct],
         key: Union[str, int],
         prop: T.Property,
+        parent: T.bpy_struct,
         context: Context,
     ) -> Optional[Delta]:
         raise NotImplementedError(f"diff for {container}[{key}]")

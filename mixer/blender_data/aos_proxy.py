@@ -158,7 +158,7 @@ class AosProxy(Proxy):
         return self
 
     def diff(
-        self, aos: T.bpy_prop_collection, key: Union[int, str], prop: T.Property, context: Context
+        self, aos: T.bpy_prop_collection, key: Union[int, str], prop: T.Property, parent: T.bpy_struct, context: Context
     ) -> Optional[DeltaUpdate]:
         """"""
 
@@ -182,7 +182,7 @@ class AosProxy(Proxy):
             for member_name in member_names:
                 # co, normals, ...
                 proxy_data = self._data.get(member_name, SoaElement())
-                delta = diff_attribute(aos, member_name, item_bl_rna, proxy_data, context)
+                delta = diff_attribute(aos, member_name, item_bl_rna, proxy_data, parent, context)
                 if delta is not None:
                     diff._data[member_name] = delta
 

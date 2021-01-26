@@ -192,7 +192,7 @@ class DatablockProxy(StructProxy):
         with context.visit_state.enter_datablock(self, datablock):
             for name, bl_rna_property in properties:
                 attr = getattr(datablock, name)
-                attr_value = read_attribute(attr, name, bl_rna_property, context)
+                attr_value = read_attribute(attr, name, bl_rna_property, datablock, context)
                 # Also write None values to reset attributes like Camera.dof.focus_object
                 # TODO for scene, test difference, only send update if dirty as continuous updates to scene
                 # master collection will conflicting writes with Master Collection
@@ -511,7 +511,9 @@ class DatablockProxy(StructProxy):
         elif isinstance(bl_item, T.Curve):
             bl_item.twist_mode = bl_item.twist_mode
 
-    def diff(self, attribute: T.ID, key: Union[int, str], prop: T.Property, context: Context) -> Optional[Delta]:
+    def diff(
+        self, attribute: T.ID, key: Union[int, str], prop: T.Property, parent: T.bpy_struct, context: Context
+    ) -> Optional[Delta]:
         """
         Computes the difference between the state of an item tracked by this proxy and its Blender state.
 
@@ -526,7 +528,7 @@ class DatablockProxy(StructProxy):
         diff = DatablockProxy.make(attribute)
 
         with context.visit_state.enter_datablock(diff, attribute):
-            delta = self._diff(attribute, key, prop, context, diff)
+            delta = self._diff(attribute, key, prop, parent, context, diff)
 
         # compute the custom properties update
         if not isinstance(delta, DeltaReplace):

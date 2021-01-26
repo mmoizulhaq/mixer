@@ -234,7 +234,12 @@ class StructCollectionProxy(Proxy):
         return self
 
     def diff(
-        self, collection: T.bpy_prop_collection, key: Union[int, str], collection_property: T.Property, context: Context
+        self,
+        collection: T.bpy_prop_collection,
+        key: Union[int, str],
+        collection_property: T.Property,
+        parent: T.bpy_struct,
+        context: Context,
     ) -> Optional[Union[DeltaUpdate, DeltaReplace]]:
         """
         Computes the difference between the state of an item tracked by this proxy and its Blender state.
@@ -268,14 +273,14 @@ class StructCollectionProxy(Proxy):
                 diff = self.__class__()
                 clear_from = specifics.clear_from(collection, sequence)
                 for i in range(clear_from):
-                    delta = diff_attribute(collection[i], i, item_property, sequence[i], context)
+                    delta = diff_attribute(collection[i], i, item_property, sequence[i], collection, context)
                     if delta is not None:
                         diff._diff_updates.append((i, delta))
 
                 diff._diff_deletions = len(sequence) - clear_from
 
                 for i, item in enumerate(collection[clear_from:], clear_from):
-                    value = read_attribute(item, i, item_property, context)
+                    value = read_attribute(item, i, item_property, collection, context)
                     diff._diff_additions.append(DeltaAddition(value))
             finally:
                 context.visit_state.path.pop()

@@ -106,7 +106,13 @@ class ShapeKeyProxy(DatablockProxy):
             return super().apply(attribute, parent, key, delta, context, to_blender)
 
     def _diff(
-        self, datablock: T.ID, key: Union[int, str], prop: T.Property, context: Context, diff: DatablockProxy
+        self,
+        datablock: T.ID,
+        key: Union[int, str],
+        prop: T.Property,
+        parent: T.bpy_struct,
+        context: Context,
+        diff: DatablockProxy,
     ) -> Optional[Delta]:
         key_blocks = datablock.key_blocks
         key_bocks_property = datablock.bl_rna.properties["key_blocks"]
@@ -121,4 +127,4 @@ class ShapeKeyProxy(DatablockProxy):
             return DeltaReplace(diff)
         else:
             # this delta is processed by the regular apply
-            return super()._diff(datablock, key, prop, context, diff)
+            return super()._diff(datablock, key, prop, parent, context, diff)

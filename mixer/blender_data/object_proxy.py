@@ -172,7 +172,9 @@ class ObjectProxy(DatablockProxy):
             for index, weight in zip(indices, weights):
                 vertex_group.add([index], weight, "ADD")
 
-    def _diff(self, struct: T.Object, key: str, prop: T.Property, context: Context, diff: Proxy) -> Optional[Delta]:
+    def _diff(
+        self, struct: T.Object, key: str, prop: T.Property, parent: T.bpy_struct, context: Context, diff: Proxy
+    ) -> Optional[Delta]:
         from mixer.blender_data.attributes import diff_attribute
 
         must_replace = False
@@ -191,14 +193,16 @@ class ObjectProxy(DatablockProxy):
             # Not that parenting with just updating the parent property in the property panel does not cause
             # the same problem
             parent_property = struct.bl_rna.properties["parent"]
-            parent_delta = diff_attribute(struct.parent, "parent", parent_property, self._data["parent"], context)
+            parent_delta = diff_attribute(
+                struct.parent, "parent", parent_property, self._data["parent"], parent, context
+            )
             must_replace |= parent_delta is not None
 
         if must_replace:
             diff.load(struct, context)
             return DeltaReplace(diff)
         else:
-            return super()._diff(struct, key, prop, context, diff)
+            return super()._diff(struct, key, prop, parent, context, diff)
 
     def apply(
         self,

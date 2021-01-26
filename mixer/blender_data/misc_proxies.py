@@ -30,7 +30,6 @@ from mixer.blender_data.attributes import read_attribute, write_attribute
 from mixer.blender_data.datablock_ref_proxy import DatablockRefProxy
 from mixer.blender_data.json_codec import serialize
 from mixer.blender_data.proxy import Delta, DeltaReplace, DeltaUpdate, Proxy
-from mixer.blender_data.struct_proxy import StructProxy
 
 if TYPE_CHECKING:
     from mixer.blender_data.proxy import Context
@@ -122,9 +121,10 @@ class NonePtrProxy(Proxy):
         container: Union[T.bpy_prop_collection, T.Struct],
         key: Union[str, int],
         prop: T.Property,
+        parent: T.bpy_struct,
         context: Context,
     ) -> Optional[DeltaUpdate]:
-        attr = read_attribute(container, key, prop, context)
+        attr = read_attribute(container, key, prop, parent, context)
         if isinstance(attr, NonePtrProxy):
             return None
         return DeltaUpdate(attr)
@@ -212,7 +212,12 @@ class SetProxy(Proxy):
         return self
 
     def diff(
-        self, attribute: Set[Any], unused_key: Union[int, str], unused_prop: T.Property, unused_context: Context
+        self,
+        attribute: Set[Any],
+        unused_key: Union[int, str],
+        unused_prop: T.Property,
+        parent: T.bpy_struct,
+        unused_context: Context,
     ) -> Optional[Delta]:
         """
         Computes the difference between the state of an item tracked by this proxy and its Blender state.
@@ -372,7 +377,7 @@ class PtrToCollectionItemProxy(Proxy):
             key: the string or index that identifies attribute in parent
             context: proxy and visit state
         """
-        collection = self._collection(attribute.id_data)
+        collection = self._collection(parent.id_data)
         pointee = collection[self._index]
         write_attribute(parent, key, pointee, context)
 
@@ -402,7 +407,12 @@ class PtrToCollectionItemProxy(Proxy):
         return self
 
     def diff(
-        self, attribute: T.bpy_struct, unused_key: str, unused_prop: T.Property, unused_context: Context
+        self,
+        attribute: T.bpy_struct,
+        unused_key: str,
+        unused_prop: T.Property,
+        parent: T.bpy_struct,
+        unused_context: Context,
     ) -> Optional[Delta]:
         """
         Computes the difference between the state of an item tracked by this proxy and its Blender state.

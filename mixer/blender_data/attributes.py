@@ -47,7 +47,7 @@ MAX_DEPTH = 30
 _builtin_types = (float, int, bool, str, bytes)
 
 
-def read_attribute(attr: Any, key: Union[int, str], attr_property: T.Property, context: Context):
+def read_attribute(attr: Any, key: Union[int, str], attr_property: T.Property, parent: T.bpy_struct, context: Context):
     """
     Load a property into a python object of the appropriate type, be it a Proxy or a native python object
     """
@@ -122,7 +122,7 @@ def read_attribute(attr: Any, key: Union[int, str], attr_property: T.Property, c
 
                 return DatablockRefProxy().load(attr, key, context)
 
-        proxy = PtrToCollectionItemProxy.make(attr_type, key)
+        proxy = PtrToCollectionItemProxy.make(type(parent), key)
         if proxy:
             return proxy.load(attr)
 
@@ -277,7 +277,7 @@ def apply_attribute(
 
 
 def diff_attribute(
-    item: Any, key: Union[int, str], item_property: T.Property, value: Any, context: Context
+    item: Any, key: Union[int, str], item_property: T.Property, value: Any, parent: T.bpy_struct, context: Context
 ) -> Optional[Delta]:
     """
     Computes a difference between a blender item and a proxy value
@@ -290,11 +290,11 @@ def diff_attribute(
     """
     try:
         if isinstance(value, Proxy):
-            return value.diff(item, key, item_property, context)
+            return value.diff(item, key, item_property, parent, context)
 
         # An attribute mappable on a python builtin type
         # TODO overkill to call read_attribute because it is not a proxy type
-        blender_value = read_attribute(item, key, item_property, context)
+        blender_value = read_attribute(item, key, item_property, parent, context)
         if blender_value != value:
             # TODO This is too coarse (whole lists)
             return DeltaUpdate(blender_value)

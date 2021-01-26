@@ -81,7 +81,7 @@ class AosElement(Proxy):
         """
 
         for index, item in enumerate(bl_collection):
-            self._data[index] = read_attribute(getattr(item, attr_name), index, attr_property, context)
+            self._data[index] = read_attribute(getattr(item, attr_name), index, attr_property, bl_collection, context)
 
         try:
             if not isinstance(self._data[0], str):
@@ -220,7 +220,9 @@ class SoaElement(Proxy):
             return self
         return self
 
-    def diff(self, aos: T.bpy_prop_collection, key: str, prop: T.Property, context: Context) -> Optional[DeltaUpdate]:
+    def diff(
+        self, aos: T.bpy_prop_collection, key: str, prop: T.Property, parent: T.bpy_struct, context: Context
+    ) -> Optional[DeltaUpdate]:
         if len(aos) == 0:
             return None
 

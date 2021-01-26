@@ -387,7 +387,12 @@ class DatablockRefCollectionProxy(Proxy):
         return self
 
     def diff(
-        self, collection: T.bpy_prop_collection, key: str, collection_property: T.Property, context: Context
+        self,
+        collection: T.bpy_prop_collection,
+        key: str,
+        collection_property: T.Property,
+        parent: T.bpy_struct,
+        context: Context,
     ) -> Optional[DeltaUpdate]:
         """
         Computes the difference between the state of an item tracked by this proxy and its Blender state.
@@ -420,7 +425,7 @@ class DatablockRefCollectionProxy(Proxy):
         maybe_updated_keys = proxy_keys & blender_keys
 
         for k in added_keys:
-            value = read_attribute(blender_items[k], k, item_property, context)
+            value = read_attribute(blender_items[k], k, item_property, collection, context)
             assert isinstance(value, (DatablockProxy, DatablockRefProxy))
             diff._data[k] = DeltaAddition(value)
 
@@ -428,7 +433,7 @@ class DatablockRefCollectionProxy(Proxy):
             diff._data[k] = DeltaDeletion(self._data[k])
 
         for k in maybe_updated_keys:
-            delta = diff_attribute(blender_items[k], k, item_property, self.data(k), context)
+            delta = diff_attribute(blender_items[k], k, item_property, self.data(k), collection, context)
             if delta is not None:
                 assert isinstance(delta, DeltaUpdate)
                 diff._data[k] = delta

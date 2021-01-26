@@ -229,6 +229,7 @@ class LibraryProxy(DatablockProxy):
         container: Union[T.bpy_prop_collection, T.Struct],
         key: Union[str, int],
         prop: T.Property,
+        parent: T.bpy_struct,
         context: Context,
     ) -> Optional[DeltaUpdate]:
         raise NotImplementedError("LibraryProxy.diff()")
@@ -345,7 +346,12 @@ class DatablockLinkProxy(DatablockProxy):
         return self
 
     def diff(
-        self, attribute, unused_key: Union[int, str], unused_prop: T.Property, unused_context: Context
+        self,
+        attribute,
+        unused_key: Union[int, str],
+        unused_prop: T.Property,
+        parent: T.bpy_struct,
+        unused_context: Context,
     ) -> Optional[Delta]:
         """
         Computes the difference between the state of an item tracked by this proxy and its Blender state.
