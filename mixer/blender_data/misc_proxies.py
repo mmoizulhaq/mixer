@@ -90,7 +90,7 @@ class NonePtrProxy(Proxy):
         """
         Apply delta to an attribute with None value.
 
-        This is used for instance Scene.camera is None and updatde to hold a valid Camera reference
+        This is used for instance Scene.camera is None and update to hold a valid Camera reference
 
         Args:
             attribute: the Blender attribute to update (e.g a_scene.camera)
@@ -128,67 +128,6 @@ class NonePtrProxy(Proxy):
         if isinstance(attr, NonePtrProxy):
             return None
         return DeltaUpdate(attr)
-
-
-@serialize
-class FCurveProxy(StructProxy):
-    """Proxy for a FCurve."""
-
-    # This is needed because FCurve.group is a pointer to Action.groups, for which no generic mechanism exists.
-    # A generic mechanism would require to :
-    # - make a difference between the pointer attribute (FCurve.group) and the pointee (ActionsGroups items)
-    # - save the pointer as an identifier to the pointee relative to the datablock,
-    #   but it seems that path_from_id cannot be used for this purpose.
-
-    _serialize = ("_group_index",)
-
-    def __init__(self):
-        super().__init__()
-        self._group_index: Optional[int] = None
-
-    def load(self, attribute: T.bpy_struct, key: Union[int, str], context: Context) -> StructProxy:
-        """
-        Load the attribute Blender struct into this proxy
-
-        Args:
-            attribute: the Blender struct to load into this proxy, (e.g an ObjectDisplay instance)
-            key: the identifier of attribute in its parent (e.g. "display")
-            context: the proxy and visit state
-        """
-        super().load(attribute, key, context)
-
-        if attribute.group is None:
-            self._group_index = None
-        else:
-            self._group_index = list(attribute.id_data.groups).index(attribute.group)
-        return self
-
-    def save(
-        self,
-        attribute: T.bpy_struct,
-        parent: Union[T.bpy_struct, T.bpy_prop_collection],
-        key: Union[int, str],
-        context: Context,
-    ):
-        """
-        Save this proxy into attribute
-
-        Args:
-            attribute: the FCurve to store this proxy into
-            parent: the FCurves collection that contains attribute
-            key: the index of attribute in parent
-            context: the proxy and visit state
-        """
-        super().save(attribute, parent, key, context)
-
-        if self._group_index is None:
-            group = None
-        else:
-            group = attribute.id_data.groups[self._group_index]
-
-        attribute.group = group
-
-    # Diff and apply are to be implemented
 
 
 @serialize
@@ -369,7 +308,7 @@ class PtrToCollectionItemProxy(Proxy):
     _serialize = ("_path", "_index")
 
     _ctors = {(T.ShapeKey, "relative_key"): ("key_blocks",), (T.FCurve, "group"): ("groups",)}
-    """ { struct member: path to the enclosing datablock connection}"""
+    """ { struct member: path to the enclosing datablock collection}"""
 
     @classmethod
     def make(cls, attr_type: type, key: str) -> Optional[PtrToCollectionItemProxy]:

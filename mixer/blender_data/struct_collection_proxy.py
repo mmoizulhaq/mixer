@@ -52,7 +52,7 @@ def _proxy_factory(attr):
 
         return NonePtrProxy()
     else:
-        return StructProxy.make(attr)
+        return StructProxy()
 
 
 @serialize
