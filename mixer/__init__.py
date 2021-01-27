@@ -105,7 +105,7 @@ def register():
     bl_properties.register()
     bl_panels.register()
     bl_operators.register()
-    blender_data.unregister()
+    blender_data.register()
 
     atexit.register(cleanup)
 
